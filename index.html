@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>見積りMVP（ローカル/Pages）</title>
+  <style>
+    :root{--bg:#0b1220;--card:#121b2f;--muted:#9fb0d0;--text:#e8eefc;--line:#24304d;--accent:#4cc3ff;--good:#36d399;--warn:#fbbf24}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;background:linear-gradient(180deg,#071024,#0b1220);color:var(--text)}
+    header{padding:18px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,18,32,.9);backdrop-filter:blur(10px);z-index:2}
+    header h1{margin:0;font-size:16px;font-weight:700}
+    header .sub{margin-top:6px;color:var(--muted);font-size:12px}
+    main{padding:18px;max-width:1200px;margin:0 auto}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}
+    @media (max-width: 980px){.grid{grid-template-columns:1fr}}
+    .card{background:rgba(18,27,47,.92);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{margin:0 0 10px;font-size:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+    input,select,textarea{width:100%;padding:10px 10px;border-radius:12px;border:1px solid var(--line);background:#0b1428;color:var(--text);outline:none}
+    textarea{min-height:62px;resize:vertical}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{border:1px solid var(--line);background:#0c1730;color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer}
+    button.primary{background:linear-gradient(135deg,#1c76ff,#4cc3ff);border-color:transparent;color:#071024;font-weight:700}
+    button.ghost{background:transparent}
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .kpi{padding:10px;border:1px solid var(--line);border-radius:14px;background:#0b1428}
+    .kpi .t{font-size:12px;color:var(--muted)}
+    .kpi .v{font-size:18px;font-weight:800;margin-top:4px}
+    .mono{font-variant-numeric:tabular-nums}
+    .table{width:100%;border-collapse:collapse;margin-top:8px}
+    .table th,.table td{border-bottom:1px solid var(--line);padding:10px 6px;font-size:12px;text-align:left}
+    .table th{color:var(--muted);font-weight:600}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+    .pill b{color:var(--text)}
+    .alert{margin-top:10px;padding:10px;border-radius:14px;border:1px solid var(--line);background:#0b1428}
+    .alert.good{border-color:rgba(54,211,153,.35)}
+    .alert.warn{border-color:rgba(251,191,36,.45)}
+    .hist{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:14px}
+    .hist-item{padding:10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+    .hist-item:last-child{border-bottom:none}
+    .hist-item small{color:var(--muted)}
+    a{color:var(--accent)}
+    details summary{cursor:pointer;color:var(--muted);margin-top:8px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>見積りMVP（1ファイル / ローカル＆GitHub Pages対応）</h1>
+  <div class="sub">入力 → 原価内訳 → 3価格（基本/競争/推奨） / 履歴保存（ブラウザ）</div>
+</header>
+
+<main>
+  <div class="grid">
+    <!-- INPUT -->
+    <section class="card">
+      <h2>見積入力</h2>
+      <div class="row">
+        <div>
+          <label>顧客名</label>
+          <input id="customer" placeholder="例：◯◯工業" />
+        </div>
+        <div>
+          <label>品目名</label>
+          <input id="itemName" placeholder="例：ブラケットA" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>材質</label>
+          <select id="material"></select>
+        </div>
+        <div>
+          <label>難易度</label>
+          <select id="difficulty">
+            <option>標準</option>
+            <option>やや複雑</option>
+            <option>複雑</option>
+          </select>
+        </div>
+      </div>
+
+      <label>サイズ（mm）</label>
+      <div class="row3">
+        <input id="x" type="number" min="1" value="50" placeholder="縦" />
+        <input id="y" type="number" min="1" value="50" placeholder="横" />
+        <input id="z" type="number" min="1" value="50" placeholder="高さ" />
+      </div>
+
+      <div class="row">
+        <div>
+          <label>数量（個）</label>
+          <input id="qty" type="number" min="1" value="10" />
+        </div>
+        <div>
+          <label>端数処理単位（円）</label>
+          <select id="moneyUnit">
+            <option value="1">1</option>
+            <option value="10">10</option>
+            <option value="100" selected>100</option>
+          </select>
+        </div>
+      </div>
+
+      <details>
+        <summary>マスタ設定（まずはここを調整すれば自社仕様になります）</summary>
+        <div class="row">
+          <div>
+            <label>人件費（円/時）</label>
+            <input id="laborRate" type="number" value="3000" />
+          </div>
+          <div>
+            <label>設備費（円/時）</label>
+            <input id="machineRate" type="number" value="1500" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>間接費率（例 0.2 = 20%）</label>
+            <input id="overheadRate" type="number" step="0.01" value="0.20" />
+          </div>
+          <div>
+            <label>利益率（基本 / 競争 / 下限）</label>
+            <div class="row3">
+              <input id="profitBasic" type="number" step="0.01" value="0.25" />
+              <input id="profitComp" type="number" step="0.01" value="0.15" />
+              <input id="profitMin" type="number" step="0.01" value="0.05" />
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>サイズ区分の境界（体積cm3で S&lt; / M&lt; ）</label>
+            <div class="row3">
+              <input id="thS" type="number" value="100" />
+              <input id="thM" type="number" value="500" />
+              <input id="dummy" disabled value="L=それ以上" />
+            </div>
+          </div>
+          <div>
+            <label>標準工数（時間）：S/M/L × 難易度</label>
+            <textarea id="worktimeJson" spellcheck="false"></textarea>
+            <small style="color:var(--muted)">JSON形式。例は自動入力済み。必要に応じて編集。</small>
+          </div>
+        </div>
+      </details>
+
+      <div class="btns">
+        <button class="primary" id="btnCalc">計算</button>
+        <button class="ghost" id="btnSample">サンプル読込</button>
+        <button class="ghost" id="btnClear">クリア</button>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <aside class="card">
+      <h2>結果</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="pill">サイズ区分：<b id="sizeClass">-</b></div>
+        <div class="pill">重量(kg)：<b class="mono" id="weightKg">-</b></div>
+        <div class="pill">原価合計：<b class="mono" id="costTotal">-</b></div>
+      </div>
+
+      <div class="kpis" style="margin-top:10px">
+        <div class="kpi">
+          <div class="t">基本価格</div>
+          <div class="v mono" id="priceBasic">-</div>
+        </div>
+        <div class="kpi">
+          <div class="t">競争価格</div>
+          <div class="v mono" id="priceComp">-</div>
+        </div>
+        <div class="kpi">
+          <div class="t">推奨価格</div>
+          <div class="v mono" id="priceRec">-</div>
+        </div>
+      </div>
+
+      <div class="alert" id="alerts" style="display:none"></div>
+
+      <table class="table">
+        <thead><tr><th>内訳</th><th>金額(円)</th></tr></thead>
+        <tbody>
+          <tr><td>材料費</td><td class="mono" id="cMat">-</td></tr>
+          <tr><td>人件費</td><td class="mono" id="cLab">-</td></tr>
+          <tr><td>設備費</td><td class="mono" id="cMac">-</td></tr>
+          <tr><td>間接費</td><td class="mono" id="cOvh">-</td></tr>
+        </tbody>
+      </table>
+
+      <h2 style="margin-top:14px">履歴（このブラウザ内）</h2>
+      <div class="hist" id="hist"></div>
+      <div class="btns" style="margin-top:10px">
+        <button id="btnExportJson">履歴をJSONでエクスポート</button>
+        <button class="ghost" id="btnClearHist">履歴を全削除</button>
+      </div>
+      <small style="color:var(--muted)">※ GitHub Pagesでも同様にローカルストレージに保存されます。</small>
+    </aside>
+  </div>
+</main>
+
+<script>
+  // ---------- MASTER (初期値) ----------
+  const MATERIALS = [
+    { id: 1, name: "鉄",   unitPricePerKg: 200, density: 7.85, lossRate: 0.05 },
+    { id: 2, name: "アルミ", unitPricePerKg: 600, density: 2.70, lossRate: 0.07 },
+  ];
+
+  const WORKTIME_DEFAULT = {
+    "S": { "標準": 0.8, "やや複雑": 1.2, "複雑": 1.6 },
+    "M": { "標準": 1.2, "やや複雑": 1.8, "複雑": 2.4 },
+    "L": { "標準": 2.0, "やや複雑": 3.0, "複雑": 4.0 },
+  };
+
+  // ---------- UTIL ----------
+  const $ = (id) => document.getElementById(id);
+  const yen = (n) => (isFinite(n) ? Math.round(n).toLocaleString("ja-JP") + " 円" : "-");
+  const num = (v, fallback=0) => {
+    const x = Number(v);
+    return Number.isFinite(x) ? x : fallback;
+  };
+  const roundMoney = (x, unit) => Math.round(x / unit) * unit;
+
+  function volumeCm3(xMm, yMm, zMm){
+    return (xMm * yMm * zMm) / 1000; // mm3 -> cm3
+  }
+  function weightKg(vCm3, density){
+    const wG = vCm3 * density; // g
+    return wG / 1000; // kg
+  }
+  function sizeClassByVolume(vCm3, thS, thM){
+    if (vCm3 < thS) return "S";
+    if (vCm3 < thM) return "M";
+    return "L";
+  }
+
+  // ---------- HISTORY ----------
+  const HIST_KEY = "estimate_mvp_history_v1";
+  function loadHist(){ try{ return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }catch{ return []; } }
+  function saveHist(items){ localStorage.setItem(HIST_KEY, JSON.stringify(items)); }
+  function renderHist(){
+    const items = loadHist();
+    const box = $("hist");
+    if (!items.length){
+      box.innerHTML = `<div style="padding:12px;color:var(--muted)">まだ履歴がありません</div>`;
+      return;
+    }
+    box.innerHTML = items.map((it, idx) => `
+      <div class="hist-item">
+        <div>
+          <div><b>${it.customer || "（顧客未入力）"}</b> / ${it.itemName || "（品目未入力）"}</div>
+          <small>${new Date(it.ts).toLocaleString("ja-JP")} ・ 基本 ${it.priceBasic.toLocaleString("ja-JP")} 円</small>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button data-act="restore" data-idx="${idx}">復元</button>
+          <button data-act="duplicate" data-idx="${idx}">複製</button>
+          <button data-act="delete" data-idx="${idx}">削除</button>
+        </div>
+      </div>
+    `).join("");
+
+    box.querySelectorAll("button").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const idx = Number(btn.dataset.idx);
+        const act = btn.dataset.act;
+        const items = loadHist();
+        const it = items[idx];
+        if (!it) return;
+        if (act === "delete"){
+          items.splice(idx,1); saveHist(items); renderHist(); return;
+        }
+        // restore / duplicate: put inputs back
+        applyInputs(it.inputs);
+        if (act === "restore") calcAndDisplay(true);
+        if (act === "duplicate") calcAndDisplay(false); // そのまま再計算
+      });
+    });
+  }
+
+  function applyInputs(i){
+    $("customer").value = i.customer || "";
+    $("itemName").value = i.itemName || "";
+    $("material").value = String(i.materialId ?? 1);
+    $("difficulty").value = i.difficulty || "標準";
+    $("x").value = i.x ?? 50;
+    $("y").value = i.y ?? 50;
+    $("z").value = i.z ?? 50;
+    $("qty").value = i.qty ?? 10;
+    $("moneyUnit").value = String(i.moneyUnit ?? 100);
+
+    // master settings
+    $("laborRate").value = i.laborRate ?? 3000;
+    $("machineRate").value = i.machineRate ?? 1500;
+    $("overheadRate").value = i.overheadRate ?? 0.2;
+    $("profitBasic").value = i.profitBasic ?? 0.25;
+    $("profitComp").value = i.profitComp ?? 0.15;
+    $("profitMin").value = i.profitMin ?? 0.05;
+    $("thS").value = i.thS ?? 100;
+    $("thM").value = i.thM ?? 500;
+    $("worktimeJson").value = i.worktimeJson ?? JSON.stringify(WORKTIME_DEFAULT, null, 2);
+  }
+
+  // ---------- CALC ----------
+  function readWorktime(){
+    try{
+      const obj = JSON.parse($("worktimeJson").value);
+      return obj;
+    }catch(e){
+      throw new Error("標準工数JSONの形式が不正です。");
+    }
+  }
+
+  function calc(inputs){
+    const mat = MATERIALS.find(m => m.id === inputs.materialId);
+    if (!mat) throw new Error("材質が見つかりません。");
+
+    const vCm3 = volumeCm3(inputs.x, inputs.y, inputs.z);
+    const sizeClass = sizeClassByVolume(vCm3, inputs.thS, inputs.thM);
+
+    const worktime = readWorktime();
+    const stdHours = worktime?.[sizeClass]?.[inputs.difficulty];
+    if (!isFinite(stdHours)) throw new Error(`標準工数が未設定です（${sizeClass} × ${inputs.difficulty}）`);
+
+    const w1 = weightKg(vCm3, mat.density);
+    const wTotal = Math.round((w1 * inputs.qty) * 1000) / 1000; // 小数第3位
+
+    const materialCost = mat.unitPricePerKg * wTotal * (1 + mat.lossRate);
+    const laborCost = stdHours * inputs.laborRate;
+    const machineCost = stdHours * inputs.machineRate;
+    const overhead = (materialCost + laborCost + machineCost) * inputs.overheadRate;
+    const costTotal = materialCost + laborCost + machineCost + overhead;
+
+    const minPrice = costTotal * (1 + inputs.profitMin);
+    const priceBasic = Math.max(minPrice, costTotal * (1 + inputs.profitBasic));
+    const priceComp  = Math.max(minPrice, costTotal * (1 + inputs.profitComp));
+    const priceRec   = Math.max(minPrice, priceBasic); // MVP: 推奨＝基本
+
+    const pb = roundMoney(priceBasic, inputs.moneyUnit);
+    const pc = roundMoney(priceComp,  inputs.moneyUnit);
+    const pr = roundMoney(priceRec,   inputs.moneyUnit);
+
+    const grossRateBasic = pb > 0 ? (pb - costTotal) / pb : 0;
+    const laborRateBasic = pb > 0 ? laborCost / pb : 0;
+
+    return {
+      sizeClass,
+      weightKg: wTotal,
+      breakdown: { materialCost, laborCost, machineCost, overhead, costTotal },
+      prices: { pb, pc, pr },
+      kpi: { grossRateBasic, laborRateBasic }
+    };
+  }
+
+  function showAlerts(res){
+    const alerts = [];
+    if (res.kpi.laborRateBasic > 0.25) alerts.push(`人件費率が25%を超えています（${(res.kpi.laborRateBasic*100).toFixed(1)}%）`);
+    if (res.kpi.grossRateBasic < 0.10) alerts.push(`粗利率が10%未満です（${(res.kpi.grossRateBasic*100).toFixed(1)}%）`);
+
+    const box = $("alerts");
+    if (!alerts.length){
+      box.style.display = "none";
+      box.className = "alert";
+      box.innerHTML = "";
+      return;
+    }
+    box.style.display = "block";
+    box.className = "alert warn";
+    box.innerHTML = "<b>注意</b><br>" + alerts.map(a=>`・${a}`).join("<br>");
+  }
+
+  function display(res){
+    $("sizeClass").textContent = res.sizeClass;
+    $("weightKg").textContent = res.weightKg.toFixed(3);
+    $("costTotal").textContent = yen(res.breakdown.costTotal);
+
+    $("priceBasic").textContent = yen(res.prices.pb);
+    $("priceComp").textContent  = yen(res.prices.pc);
+    $("priceRec").textContent   = yen(res.prices.pr);
+
+    $("cMat").textContent = yen(res.breakdown.materialCost);
+    $("cLab").textContent = yen(res.breakdown.laborCost);
+    $("cMac").textContent = yen(res.breakdown.machineCost);
+    $("cOvh").textContent = yen(res.breakdown.overhead);
+
+    showAlerts(res);
+  }
+
+  function readInputs(){
+    return {
+      customer: $("customer").value.trim(),
+      itemName: $("itemName").value.trim(),
+      materialId: Number($("material").value),
+      difficulty: $("difficulty").value,
+      x: num($("x").value, 1),
+      y: num($("y").value, 1),
+      z: num($("z").value, 1),
+      qty: Math.max(1, Math.floor(num($("qty").value, 1))),
+      moneyUnit: Number($("moneyUnit").value),
+
+      laborRate: num($("laborRate").value, 3000),
+      machineRate: num($("machineRate").value, 1500),
+      overheadRate: num($("overheadRate").value, 0.2),
+      profitBasic: num($("profitBasic").value, 0.25),
+      profitComp: num($("profitComp").value, 0.15),
+      profitMin: num($("profitMin").value, 0.05),
+
+      thS: num($("thS").value, 100),
+      thM: num($("thM").value, 500),
+
+      worktimeJson: $("worktimeJson").value
+    };
+  }
+
+  function calcAndDisplay(saveToHist=true){
+    try{
+      const inputs = readInputs();
+      const res = calc(inputs);
+      display(res);
+
+      if (saveToHist){
+        const items = loadHist();
+        items.unshift({
+          ts: Date.now(),
+          customer: inputs.customer,
+          itemName: inputs.itemName,
+          priceBasic: res.prices.pb,
+          inputs
+        });
+        // keep last 50
+        saveHist(items.slice(0,50));
+        renderHist();
+      }
+    }catch(e){
+      const box = $("alerts");
+      box.style.display = "block";
+      box.className = "alert warn";
+      box.innerHTML = "<b>エラー</b><br>" + (e?.message || String(e));
+    }
+  }
+
+  // ---------- INIT ----------
+  function init(){
+    // materials
+    $("material").innerHTML = MATERIALS.map(m=>`<option value="${m.id}">${m.name}</option>`).join("");
+    $("worktimeJson").value = JSON.stringify(WORKTIME_DEFAULT, null, 2);
+
+    // history
+    renderHist();
+
+    // buttons
+    $("btnCalc").addEventListener("click", ()=>calcAndDisplay(true));
+    $("btnClear").addEventListener("click", ()=>{
+      ["customer","itemName"].forEach(id=>$(id).value="");
+      ["x","y","z"].forEach(id=>$(id).value=50);
+      $("qty").value=10;
+      $("difficulty").value="標準";
+      $("moneyUnit").value="100";
+      $("sizeClass").textContent="-";
+      ["weightKg","costTotal","priceBasic","priceComp","priceRec","cMat","cLab","cMac","cOvh"].forEach(id=>$(id).textContent="-");
+      $("alerts").style.display="none";
+    });
+    $("btnSample").addEventListener("click", ()=>{
+      applyInputs({
+        customer:"テスト顧客A",
+        itemName:"ブラケットA",
+        materialId:1,
+        difficulty:"やや複雑",
+        x:80,y:60,z:40,qty:25,
+        moneyUnit:100,
+        laborRate:3200,
+        machineRate:1600,
+        overheadRate:0.22,
+        profitBasic:0.25,
+        profitComp:0.15,
+        profitMin:0.05,
+        thS:120, thM:700,
+        worktimeJson: JSON.stringify(WORKTIME_DEFAULT, null, 2)
+      });
+      calcAndDisplay(false);
+    });
+
+    $("btnClearHist").addEventListener("click", ()=>{
+      if (!confirm("履歴を全削除します。よろしいですか？")) return;
+      saveHist([]);
+      renderHist();
+    });
+
+    $("btnExportJson").addEventListener("click", ()=>{
+      const data = JSON.stringify(loadHist(), null, 2);
+      const blob = new Blob([data], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "estimate_history.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  init();
+</script>
+</body>
+</html>
